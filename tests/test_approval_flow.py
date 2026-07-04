@@ -33,7 +33,8 @@ def test_send_approval_request(mock_smtp):
         sender_email="bot@example.com",
         sender_password="password",
         smtp_server="smtp.example.com",
-        smtp_port=587
+        smtp_port=587,
+        command="echo 'test command'"
     )
     
     # アサーション
@@ -201,5 +202,41 @@ def test_test_connection_fail(mock_imap, mock_smtp):
     )
     
     assert result is False
+
+@patch("imaplib.IMAP4_SSL")
+@pytest.mark.parametrize("keyword,expected_status", [
+    ("OK", "APPROVE"),
+    ("了解", "APPROVE"),
+    ("PROCEED", "APPROVE"),
+    ("NG", "REJECT"),
+    ("CANCEL", "REJECT"),
+    ("不可", "REJECT")
+])
+def test_check_for_approval_flexible_keywords(mock_imap, keyword, expected_status):
+    """様々なキーワード（OK, 了解, NG, 変更など）による承認・却下の検知テスト"""
+    instance = mock_imap.return_value
+    instance.select.return_value = ("OK", [b"1"])
+    instance.search.return_value = ("OK", [b"101"])
+    
+    raw_email_data = f"""From: makoto.insidesales@gmail.com
+Subject: Re: [APPROVAL REQUIRED] Task: Test Task (ID: test1234)
+
+{keyword}. Please execute.
+""".encode("utf-8")
+    instance.fetch.return_value = ("OK", [(b"101 (RFC822 {150}", raw_email_data), b")"])
+    
+    status, comment = check_for_approval(
+        task_id="test1234",
+        approver="makoto.insidesales@gmail.com",
+        sender_email="bot@example.com",
+        sender_password="password",
+        imap_server="imap.example.com",
+        imap_port=993
+    )
+    
+    assert status == expected_status
+    assert keyword in comment
+    instance.store.assert_called_with(b"101", "+FLAGS", "\\Seen")
+
 
 

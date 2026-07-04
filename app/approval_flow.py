@@ -85,7 +85,8 @@ def send_approval_request(
     sender_password: str,
     smtp_server: str,
     smtp_port: int,
-    details: str = ""
+    details: str = "",
+    command: str = ""
 ) -> bool:
     """
     承認依頼メールを送信します。
@@ -102,7 +103,7 @@ def send_approval_request(
 
 ■ タスク名: {task_name}
 ■ タスクID: {task_id}
-■ 実行対象コマンド: {task_name} (コマンド: {task_id})
+■ 実行対象コマンド: {command if command else task_name}
 {details_section}
 この処理を実行してよろしければ、本メールに返信し、本文の先頭に
 「APPROVE」または「承認」と入力して送信してください。
@@ -244,13 +245,30 @@ def check_for_approval(
                     reply_text = extract_reply_content(body)
                     reply_upper = reply_text.upper()
                     
+                    # 承認・却下キーワードの定義 (より柔軟な返信に対応)
+                    # 英語キーワードは部分一致による誤判定（例: REVIEWING の "NG"）を防ぐため単語境界(\b)を使用
+                    approve_en = ["APPROVE", "OK", "PROCEED"]
+                    reject_en = ["REJECT", "NG", "CANCEL"]
+                    
+                    approve_ja = ["承認", "許可", "了解"]
+                    reject_ja = ["却下", "不可"]
+                    
+                    is_approved = (
+                        any(re.search(rf"\b{kw}\b", reply_upper) for kw in approve_en) or
+                        any(kw in reply_text for kw in approve_ja)
+                    )
+                    is_rejected = (
+                        any(re.search(rf"\b{kw}\b", reply_upper) for kw in reject_en) or
+                        any(kw in reply_text for kw in reject_ja)
+                    )
+                    
                     # 承認・却下キーワードの確認
-                    if "APPROVE" in reply_upper or "承認" in reply_text:
+                    if is_approved:
                         # 既読にしてから返す
                         mail.store(msg_id, "+FLAGS", "\\Seen")
                         mail.logout()
                         return "APPROVE", reply_text
-                    elif "REJECT" in reply_upper or "却下" in reply_text:
+                    elif is_rejected:
                         mail.store(msg_id, "+FLAGS", "\\Seen")
                         mail.logout()
                         return "REJECT", reply_text
@@ -378,7 +396,8 @@ def main():
         sender_password=sender_password,
         smtp_server=smtp_server,
         smtp_port=smtp_port,
-        details=args.details
+        details=args.details,
+        command=args.command
     )
     
     if not success:

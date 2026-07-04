@@ -434,7 +434,8 @@ with tab2:
                         sender_password=st.session_state.sender_password,
                         smtp_server=st.session_state.smtp_server,
                         smtp_port=st.session_state.smtp_port,
-                        details=st.session_state.approval_details
+                        details=st.session_state.approval_details,
+                        command=st.session_state.approval_command
                     )
                     if success:
                         st.session_state.approval_status = "waiting"
