@@ -97,7 +97,7 @@ st.markdown("""
         border-left: 5px solid #8bc34a;
     }
 </style>
-""", unsafe_allow_code_html=True)
+""", unsafe_allow_html=True)
 
 # セッション状態の初期化
 if "chat_history" not in st.session_state:
@@ -125,7 +125,7 @@ st.markdown("""
     <h1>🛡️ Multi-Cloud Secure AI & Mail Approval</h1>
     <p>GCP & Azure 閉域連携 / DLP / メール返信型承認自動化デモ</p>
 </div>
-""", unsafe_allow_code_html=True)
+""", unsafe_allow_html=True)
 
 # サイドバーの設定
 st.sidebar.title("🛠️ 設定 & パラメータ")
@@ -205,10 +205,10 @@ with tab1:
                 role_label = "👤 ユーザー (送信データ)" if chat["role"] == "user" else "🤖 AI 応答"
                 bubble_class = "user-bubble" if chat["role"] == "user" else "ai-bubble"
                 st.markdown(f"**{role_label}**")
-                st.markdown(f'<div class="chat-bubble {bubble_class}">{chat["content"]}</div>', unsafe_allow_code_html=True)
+                st.markdown(f'<div class="chat-bubble {bubble_class}">{chat["content"]}</div>', unsafe_allow_html=True)
                 if "provider" in chat:
                     badge_type = "badge-azure" if "Azure" in chat["provider"] else "badge-gcp"
-                    st.markdown(f'<span class="badge {badge_type}">{chat["provider"]}</span>', unsafe_allow_code_html=True)
+                    st.markdown(f'<span class="badge {badge_type}">{chat["provider"]}</span>', unsafe_allow_html=True)
                     st.markdown("---")
         
         # 入力フォーム
