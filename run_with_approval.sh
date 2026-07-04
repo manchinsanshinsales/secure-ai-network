@@ -25,11 +25,8 @@ if [ -z "$TASK_NAME" ] || [ -z "$COMMAND_TO_RUN" ]; then
     exit 1
 fi
 
-# 3つ目以降の引数を追加の引数として渡す
+# 3つ目以降の引数を残して、Pythonスクリプトに直接安全に引き渡す
 shift 2
-if [ "$#" -gt 0 ]; then
-    EXTRA_ARGS="$@"
-fi
 
 # venvのpythonがある場合はそれを優先的に使用
 if [ -f "./venv/bin/python" ]; then
@@ -47,4 +44,4 @@ echo "[*] Command: $COMMAND_TO_RUN"
 echo ""
 
 # 承認フロースクリプトを実行
-$PYTHON_CMD app/approval_flow.py --task "$TASK_NAME" --command "$COMMAND_TO_RUN" --approver "$APPROVER" $EXTRA_ARGS
+$PYTHON_CMD app/approval_flow.py --task "$TASK_NAME" --command "$COMMAND_TO_RUN" --approver "$APPROVER" "$@"

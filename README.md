@@ -83,6 +83,38 @@ graph TD
 └── README.md              # プロジェクト概要（本ファイル）
 ```
 
+## 📧 メール返信型 承認自動化フロー (Mail Approval Flow)
+
+本システムには、安全な運用ゲートキーパーとして、特定の重要処理（例: Terraformの適用）を実行する前に承認者にメールを送信し、その返信（`APPROVE` または `承認`）をトリガーに自動実行する仕組みが組み込まれています。
+
+### 1. 承認用 CLI ラッパー
+任意のシェルコマンドをメール承認後に実行するための汎用ラッパーです：
+```bash
+./run_with_approval.sh "<タスク名>" "<実行するコマンド>" [追加オプション...]
+```
+- **承認者宛先**: デフォルトで `makoto.insidesales@gmail.com` に送信されます。
+
+### 2. Terraform デプロイ連携スクリプト (`deploy_with_approval.sh`)
+Terraform の変更計画 (plan) を実行し、変更差分をメール本文に含めて承認者に送信します。承認が得られた段階で `terraform apply` を安全に自動実行します。
+```bash
+# シミュレーションモード（メール送信なしで、コンソール上で承認・却下を模擬）
+./deploy_with_approval.sh --cloud azure --simulate
+
+# 本番動作（メールを実際に送信し、返信を受信するまでバックグラウンドでポーリング）
+./deploy_with_approval.sh --cloud azure
+```
+
+### 3. メール送受信の設定 (`.env` ファイルの作成)
+実際のメール送信・受信ポーリングを行うには、プロジェクトのルートディレクトリに `.env` ファイルを作成し、以下のボット送信元アカウントを設定してください：
+```env
+# ボットのメールアドレス設定（Gmailの場合はアプリパスワードが必要です）
+SENDER_EMAIL=your-bot-email@gmail.com
+SENDER_PASSWORD=your-gmail-app-password
+
+# 承認者のメールアドレス
+APPROVER_EMAIL=makoto.insidesales@gmail.com
+```
+
 ---
 
 ## 🛠️ クイックスタート（ローカルデモ起動手順）

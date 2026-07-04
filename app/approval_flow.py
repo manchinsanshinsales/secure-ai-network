@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import time
 import uuid
@@ -26,6 +27,56 @@ DEFAULT_IMAP_SERVER = "imap.gmail.com"
 DEFAULT_IMAP_PORT = 993
 DEFAULT_APPROVER = "makoto.insidesales@gmail.com"
 
+def test_connection(
+    sender_email: str,
+    sender_password: str,
+    smtp_server: str,
+    smtp_port: int,
+    imap_server: str,
+    imap_port: int
+) -> bool:
+    """
+    SMTPおよびIMAPのサーバーログイン接続テストを行います。
+    """
+    print("==================================================")
+    print("📧 メールサーバー接続および認証テストを開始します...")
+    print("==================================================")
+    
+    # 1. SMTPテスト
+    smtp_success = False
+    try:
+        print(f"[*] SMTP接続テスト中: {smtp_server}:{smtp_port} ...")
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        print(f"[*] SMTPログイン中: {sender_email} ...")
+        server.login(sender_email, sender_password)
+        server.quit()
+        print("[+] SMTP接続 & ログイン成功！")
+        smtp_success = True
+    except Exception as e:
+        print(f"[-] SMTPテスト失敗: {e}")
+        
+    # 2. IMAPテスト
+    imap_success = False
+    try:
+        print(f"[*] IMAP接続テスト中: {imap_server}:{imap_port} ...")
+        mail = imaplib.IMAP4_SSL(imap_server, imap_port)
+        print(f"[*] IMAPログイン中: {sender_email} ...")
+        mail.login(sender_email, sender_password)
+        mail.logout()
+        print("[+] IMAP接続 & ログイン成功！")
+        imap_success = True
+    except Exception as e:
+        print(f"[-] IMAPテスト失敗: {e}")
+        
+    print("==================================================")
+    if smtp_success and imap_success:
+        print("[+] 接続テスト結果: すべて成功！メール承認フローを開始できます。")
+        return True
+    else:
+        print("[-] 接続テスト結果: 一部またはすべてのテストが失敗しました。設定を確認してください。")
+        return False
+
 def send_approval_request(
     task_name: str,
     task_id: str,
@@ -33,20 +84,26 @@ def send_approval_request(
     sender_email: str,
     sender_password: str,
     smtp_server: str,
-    smtp_port: int
+    smtp_port: int,
+    details: str = ""
 ) -> bool:
     """
     承認依頼メールを送信します。
     """
     subject = f"[APPROVAL REQUIRED] Task: {task_name} (ID: {task_id})"
+    
+    details_section = ""
+    if details:
+        details_section = f"\n■ タスク詳細 / 実行計画:\n----------------------------------------\n{details}\n----------------------------------------\n"
+        
     body = f"""こんにちは、
 
 以下のタスク実行の承認を求めています。
 
 ■ タスク名: {task_name}
 ■ タスクID: {task_id}
-■ 実行対象コマンドの例: (指定された自動実行コマンド)
-
+■ 実行対象コマンド: {task_name} (コマンド: {task_id})
+{details_section}
 この処理を実行してよろしければ、本メールに返信し、本文の先頭に
 「APPROVE」または「承認」と入力して送信してください。
 
@@ -73,6 +130,45 @@ def send_approval_request(
         print(f"[-] メール送信エラー: {e}")
         return False
 
+def extract_reply_content(body: str) -> str:
+    """
+    メール本文から返信部分（引用やヘッダーを除いた、送信者が直接入力したコンテンツ）を抽出します。
+    """
+    if not body:
+        return ""
+    lines = body.splitlines()
+    reply_lines = []
+    
+    # 一般的な引用開始パターン
+    quote_headers = [
+        re.compile(r"^\s*on\s+.*wrote:\s*$", re.IGNORECASE),
+        re.compile(r"^\s*-+\s*original\s+message\s*-+\s*$", re.IGNORECASE),
+        re.compile(r"^\s*From:\s+.*", re.IGNORECASE),
+        re.compile(r"^\s*Sent:\s+.*", re.IGNORECASE),
+        re.compile(r"^\s*To:\s+.*", re.IGNORECASE),
+        re.compile(r"^\s*Subject:\s+.*", re.IGNORECASE),
+        re.compile(r"^\s*\d{4}[-/.]\d{2}[-/.]\d{2}\s+\d{2}:\d{2}.*:$")
+    ]
+    
+    for line in lines:
+        stripped = line.strip()
+        # 引用行 (行頭が '>') の場合はそこで終了
+        if stripped.startswith(">"):
+            break
+            
+        # 引用ヘッダーにマッチした場合は、それ以降をカット
+        is_header = False
+        for pattern in quote_headers:
+            if pattern.match(stripped):
+                is_header = True
+                break
+        if is_header:
+            break
+            
+        reply_lines.append(line)
+        
+    return "\n".join(reply_lines).strip()
+
 def check_for_approval(
     task_id: str,
     approver: str,
@@ -91,10 +187,15 @@ def check_for_approval(
         mail.login(sender_email, sender_password)
         mail.select("inbox")
 
-        # 承認者からの未読メール、または該当タスクIDを含むメールを検索
-        # ここではタスクIDが件名や本文に含まれていることを基準にする
-        search_criterion = f'TEXT "{task_id}"'
+        # 承認者からの返信を検知するため、件名(SUBJECT)にタスクIDが含まれるメールを優先的に検索
+        # TEXT検索はインデックスの遅延が大きいため、SUBJECT検索を用いることで高速かつ確実に検知します
+        search_criterion = f'SUBJECT "{task_id}"'
         status, messages = mail.search(None, search_criterion)
+        
+        # もしSUBJECT検索で見つからない場合は、フォールバックとしてTEXT全体検索も試みる
+        if status != "OK" or not messages[0].split():
+            search_criterion_fallback = f'TEXT "{task_id}"'
+            status, messages = mail.search(None, search_criterion_fallback)
         
         if status != "OK":
             mail.logout()
@@ -140,18 +241,19 @@ def check_for_approval(
                         except Exception:
                             body = msg.get_payload(decode=True).decode("iso-2022-jp", errors="ignore")
                     
-                    body_upper = body.upper().strip()
+                    reply_text = extract_reply_content(body)
+                    reply_upper = reply_text.upper()
                     
                     # 承認・却下キーワードの確認
-                    if "APPROVE" in body_upper or "承認" in body:
+                    if "APPROVE" in reply_upper or "承認" in reply_text:
                         # 既読にしてから返す
                         mail.store(msg_id, "+FLAGS", "\\Seen")
                         mail.logout()
-                        return "APPROVE", body.strip()
-                    elif "REJECT" in body_upper or "却下" in body:
+                        return "APPROVE", reply_text
+                    elif "REJECT" in reply_upper or "却下" in reply_text:
                         mail.store(msg_id, "+FLAGS", "\\Seen")
                         mail.logout()
-                        return "REJECT", body.strip()
+                        return "REJECT", reply_text
 
         mail.logout()
     except Exception as e:
@@ -194,14 +296,50 @@ def run_command(command: str) -> bool:
 
 def main():
     parser = argparse.ArgumentParser(description="メール返信による承認制御フローを実行します。")
-    parser.add_argument("--task", required=True, help="実行するタスク名")
-    parser.add_argument("--command", required=True, help="承認後に実行するシェルコマンド")
+    parser.add_argument("--task", help="実行するタスク名")
+    parser.add_argument("--command", help="承認後に実行するシェルコマンド")
     parser.add_argument("--approver", default=DEFAULT_APPROVER, help="承認者のメールアドレス")
     parser.add_argument("--interval", type=int, default=15, help="IMAPポーリングの間隔(秒)")
     parser.add_argument("--timeout", type=int, default=1800, help="承認待ちのタイムアウト時間(秒、デフォルト30分)")
     parser.add_argument("--simulate", action="store_true", help="メール送受信を行わず、コンソール上で承認シミュレーションを行います。")
+    parser.add_argument("--details", default="", help="タスクの詳細情報や計画内容")
+    parser.add_argument("--test-connection", action="store_true", help="SMTP/IMAPのログイン接続テストを行います（タスク実行は行いません）。")
     
     args = parser.parse_args()
+
+    # 環境変数からSMTP/IMAP接続情報を取得
+    sender_email = os.getenv("SENDER_EMAIL")
+    sender_password = os.getenv("SENDER_PASSWORD")
+    smtp_server = os.getenv("SMTP_SERVER", DEFAULT_SMTP_SERVER)
+    try:
+        smtp_port = int(os.getenv("SMTP_PORT", DEFAULT_SMTP_PORT))
+    except ValueError:
+        smtp_port = DEFAULT_SMTP_PORT
+    imap_server = os.getenv("IMAP_SERVER", DEFAULT_IMAP_SERVER)
+    try:
+        imap_port = int(os.getenv("IMAP_PORT", DEFAULT_IMAP_PORT))
+    except ValueError:
+        imap_port = DEFAULT_IMAP_PORT
+
+    # 接続テスト機能が有効な場合
+    if args.test_connection:
+        if not sender_email or not sender_password:
+            print("[-] エラー: 環境変数 SENDER_EMAIL または SENDER_PASSWORD が設定されていません。")
+            print("    テスト接続を行うには、.envファイルを作成するか、環境変数を設定してください。")
+            sys.exit(1)
+        success = test_connection(
+            sender_email=sender_email,
+            sender_password=sender_password,
+            smtp_server=smtp_server,
+            smtp_port=smtp_port,
+            imap_server=imap_server,
+            imap_port=imap_port
+        )
+        sys.exit(0 if success else 1)
+
+    # 通常のタスク実行時に必須となる引数のチェック
+    if not args.task or not args.command:
+        parser.error("通常の実行には --task と --command が必須です（--test-connection を除く）。")
 
     task_id = str(uuid.uuid4())[:8]
     print("==================================================")
@@ -224,20 +362,6 @@ def main():
             print("[-] 却下されました (シミュレーション)")
             sys.exit(1)
 
-    # 環境変数からSMTP/IMAP接続情報を取得
-    sender_email = os.getenv("SENDER_EMAIL")
-    sender_password = os.getenv("SENDER_PASSWORD")
-    smtp_server = os.getenv("SMTP_SERVER", DEFAULT_SMTP_SERVER)
-    try:
-        smtp_port = int(os.getenv("SMTP_PORT", DEFAULT_SMTP_PORT))
-    except ValueError:
-        smtp_port = DEFAULT_SMTP_PORT
-    imap_server = os.getenv("IMAP_SERVER", DEFAULT_IMAP_SERVER)
-    try:
-        imap_port = int(os.getenv("IMAP_PORT", DEFAULT_IMAP_PORT))
-    except ValueError:
-        imap_port = DEFAULT_IMAP_PORT
-
     if not sender_email or not sender_password:
         print("[-] エラー: 環境変数 SENDER_EMAIL または SENDER_PASSWORD が設定されていません。")
         print("    実際のメール送受信を行うには、.envファイルを作成するか、環境変数を設定してください。")
@@ -253,7 +377,8 @@ def main():
         sender_email=sender_email,
         sender_password=sender_password,
         smtp_server=smtp_server,
-        smtp_port=smtp_port
+        smtp_port=smtp_port,
+        details=args.details
     )
     
     if not success:

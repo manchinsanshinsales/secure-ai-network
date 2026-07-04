@@ -114,10 +114,32 @@ if "approval_task_name" not in st.session_state:
     st.session_state.approval_task_name = ""
 if "approval_command" not in st.session_state:
     st.session_state.approval_command = ""
+if "approval_details" not in st.session_state:
+    st.session_state.approval_details = ""
 if "approval_logs" not in st.session_state:
     st.session_state.approval_logs = []
 if "approval_start_time" not in st.session_state:
     st.session_state.approval_start_time = 0.0
+
+# メール承認デモ用のメールサーバー設定のセッション初期化
+if "sender_email" not in st.session_state:
+    st.session_state.sender_email = os.getenv("SENDER_EMAIL", "")
+if "sender_password" not in st.session_state:
+    st.session_state.sender_password = os.getenv("SENDER_PASSWORD", "")
+if "smtp_server" not in st.session_state:
+    st.session_state.smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+if "smtp_port" not in st.session_state:
+    try:
+        st.session_state.smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    except ValueError:
+        st.session_state.smtp_port = 587
+if "imap_server" not in st.session_state:
+    st.session_state.imap_server = os.getenv("IMAP_SERVER", "imap.gmail.com")
+if "imap_port" not in st.session_state:
+    try:
+        st.session_state.imap_port = int(os.getenv("IMAP_PORT", "993"))
+    except ValueError:
+        st.session_state.imap_port = 993
 
 # タイトルの表示
 st.markdown("""
@@ -175,6 +197,43 @@ enable_zip = st.sidebar.checkbox("郵便番号 (JP_ZIP)", value=True)
 
 # 5. クライアントの初期化
 ai_client = SecureAiClient(use_mock=use_mock)
+
+# 6. メール承認用ボット設定
+st.sidebar.markdown("---")
+with st.sidebar.expander("📧 ボットメール設定 (承認用)"):
+    st.write("実際のメール承認フローをテストするためのSMTP/IMAP認証設定です。")
+    sender_mail_input = st.text_input("ボット送信元メールアドレス:", value=st.session_state.sender_email)
+    sender_pwd_input = st.text_input("ボットアプリパスワード:", value=st.session_state.sender_password, type="password")
+    
+    st.session_state.sender_email = sender_mail_input
+    st.session_state.sender_password = sender_pwd_input
+    
+    with st.expander("⚙️ サーバー詳細設定"):
+        smtp_srv = st.text_input("SMTP サーバー:", value=st.session_state.smtp_server)
+        smtp_pt = st.number_input("SMTP ポート:", value=st.session_state.smtp_port, step=1)
+        imap_srv = st.text_input("IMAP サーバー:", value=st.session_state.imap_server)
+        imap_pt = st.number_input("IMAP ポート:", value=st.session_state.imap_port, step=1)
+        
+        st.session_state.smtp_server = smtp_srv
+        st.session_state.smtp_port = int(smtp_pt)
+        st.session_state.imap_server = imap_srv
+        st.session_state.imap_port = int(imap_pt)
+
+    if st.button("💾 設定を .env ファイルに保存"):
+        try:
+            with open(".env", "w", encoding="utf-8") as f:
+                f.write(f"SENDER_EMAIL={sender_mail_input}\n")
+                f.write(f"SENDER_PASSWORD={sender_pwd_input}\n")
+                f.write(f"SMTP_SERVER={st.session_state.smtp_server}\n")
+                f.write(f"SMTP_PORT={st.session_state.smtp_port}\n")
+                f.write(f"IMAP_SERVER={st.session_state.imap_server}\n")
+                f.write(f"IMAP_PORT={st.session_state.imap_port}\n")
+                f.write(f"APPROVER_EMAIL=makoto.insidesales@gmail.com\n")
+            st.success("🟢 .env ファイルが正常に保存されました！")
+            time.sleep(1)
+            st.rerun()
+        except Exception as e:
+            st.error(f"[-] 保存エラー: {e}")
 
 # タブ構成の定義
 tab1, tab2, tab3 = st.tabs([
@@ -328,17 +387,15 @@ with tab2:
     """)
     
     # 環境変数の読み込み状況
-    env_sender = os.getenv("SENDER_EMAIL")
-    env_passwd = os.getenv("SENDER_PASSWORD")
+    env_sender = st.session_state.sender_email
+    env_passwd = st.session_state.sender_password
     
     is_mail_configured = bool(env_sender and env_passwd)
     
     if not is_mail_configured:
         st.warning("""
-        ⚠️ **メール送受信環境変数が未設定です。**
-        実際のメール送受信を行うには、プロジェクトのルートディレクトリに `.env` ファイルを作成し、以下を設定してください：
-        - `SENDER_EMAIL`: 依頼を送受信するボット用の Gmail 等のアドレス
-        - `SENDER_PASSWORD`: 上記アドレスのアプリパスワード
+        ⚠️ **メール送受信設定が未完了です。**
+        実際のメール送受信を行うには、左側サイドバーの「📧 ボットメール設定 (承認用)」でボット用メールアドレスとアプリパスワードを設定してください。
         
         ※現在は **「シミュレーションモード」** での動作確認が可能です。
         """)
@@ -355,12 +412,14 @@ with tab2:
         approver = st.text_input("承認者のメールアドレス (To):", value=DEFAULT_APPROVER)
         task_name = st.text_input("タスク名:", value="Terraform Apply (Azure & GCP VPN Connection)")
         command_to_run = st.text_input("承認後に実行するコマンド:", value="echo 'インフラ構成の適用が正常に完了しました。'")
+        task_details = st.text_area("タスク詳細 (実行計画やPlan結果など):", value="AzureとGCP間の閉域VPNゲートウェイおよびPrivate Endpointを新規に構築します。")
         
         if st.session_state.approval_status == "idle":
             if st.button("🚀 承認フローを開始する", type="primary"):
                 st.session_state.approval_task_id = str(uuid.uuid4())[:8]
                 st.session_state.approval_task_name = task_name
                 st.session_state.approval_command = command_to_run
+                st.session_state.approval_details = task_details
                 st.session_state.approval_start_time = time.time()
                 st.session_state.approval_logs = ["[System] 承認フローのセットアップを開始しました。"]
                 
@@ -371,10 +430,11 @@ with tab2:
                         task_name=task_name,
                         task_id=st.session_state.approval_task_id,
                         approver=approver,
-                        sender_email=env_sender,
-                        sender_password=env_passwd,
-                        smtp_server=os.getenv("SMTP_SERVER", "smtp.gmail.com"),
-                        smtp_port=int(os.getenv("SMTP_PORT", "587"))
+                        sender_email=st.session_state.sender_email,
+                        sender_password=st.session_state.sender_password,
+                        smtp_server=st.session_state.smtp_server,
+                        smtp_port=st.session_state.smtp_port,
+                        details=st.session_state.approval_details
                     )
                     if success:
                         st.session_state.approval_status = "waiting"
@@ -387,6 +447,8 @@ with tab2:
                     st.session_state.approval_status = "waiting"
                     st.session_state.approval_logs.append("[Simulation] シミュレーション承認依頼メールを作成しました。")
                     st.session_state.approval_logs.append(f"[Simulation] 送信先: {approver} | 件名: [APPROVAL REQUIRED] Task: {task_name}")
+                    if st.session_state.approval_details:
+                        st.session_state.approval_logs.append(f"[Simulation] 詳細: {st.session_state.approval_details}")
                     st.session_state.approval_logs.append("[Simulation] 承認者の意思決定を待っています。(画面右側のシミュレーションボタンを使用してください)")
                 st.rerun()
         else:
@@ -436,10 +498,10 @@ with tab2:
                         status, comment = check_for_approval(
                             task_id=st.session_state.approval_task_id,
                             approver=approver,
-                            sender_email=env_sender,
-                            sender_password=env_passwd,
-                            imap_server=os.getenv("IMAP_SERVER", "imap.gmail.com"),
-                            imap_port=int(os.getenv("IMAP_PORT", "993"))
+                            sender_email=st.session_state.sender_email,
+                            sender_password=st.session_state.sender_password,
+                            imap_server=st.session_state.imap_server,
+                            imap_port=st.session_state.imap_port
                         )
                         
                         if status == "APPROVE":
