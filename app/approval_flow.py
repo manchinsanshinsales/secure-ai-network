@@ -201,11 +201,18 @@ def check_for_approval(
     返却値: (ステータス["APPROVE" | "REJECT" | None], 承認者のコメント)
     """
     try:
-        # SSL接続
-        if imap_server in ("127.0.0.1", "localhost"):
-            mail = imaplib.IMAP4(imap_server, imap_port)
+        # ポートが標準のSSLポート(993)の場合はSSL接続、それ以外の場合は非SSL接続
+        if imap_port == 993:
+            try:
+                mail = imaplib.IMAP4_SSL(imap_server, imap_port)
+            except Exception:
+                mail = imaplib.IMAP4(imap_server, imap_port)
         else:
-            mail = imaplib.IMAP4_SSL(imap_server, imap_port)
+            try:
+                mail = imaplib.IMAP4(imap_server, imap_port)
+            except Exception:
+                mail = imaplib.IMAP4_SSL(imap_server, imap_port)
+        
         mail.login(sender_email, sender_password)
         mail.select("inbox")
 

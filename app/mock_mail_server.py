@@ -58,7 +58,7 @@ def auto_reply_task(task_id, task_name, sender_email, approver_email):
     msg["From"] = approver_email
     msg["To"] = sender_email
     
-    add_mail_to_mailbox(msg.as_bytes())
+    add_mail_to_mailbox(msg.as_bytes(policy=email.policy.SMTP))
 
 # SMTP 接続ハンドラ
 def handle_smtp_client(client_socket):
@@ -206,7 +206,7 @@ def handle_imap_client(client_socket):
                             
                 if target_mail:
                     raw_len = len(target_mail["raw"])
-                    client_socket.sendall(f"* {msg_id} FETCH (RFC822 {{{raw_len}}}\r\n".encode() + target_mail["raw"] + b"\r\n)\r\n" + f"{tag} OK FETCH completed\r\n".encode())
+                    client_socket.sendall(f"* {msg_id} FETCH (RFC822 {{{raw_len}}}\r\n".encode() + target_mail["raw"] + b")\r\n" + f"{tag} OK FETCH completed\r\n".encode())
                 else:
                     client_socket.sendall(f"{tag} NO No such message\r\n".encode())
             elif cmd == "STORE":

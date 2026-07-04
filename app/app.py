@@ -209,6 +209,37 @@ ai_client = SecureAiClient(use_mock=use_mock)
 st.sidebar.markdown("---")
 with st.sidebar.expander("📧 ボットメール設定 (承認用)"):
     st.write("実際のメール承認フローをテストするためのSMTP/IMAP認証設定です。")
+    
+    # モックメールサーバーの起動状態を確認するヘルパー
+    import socket
+    def is_port_open(host, port):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.5)
+                s.connect((host, port))
+                return True
+        except Exception:
+            return False
+
+    smtp_mock_active = is_port_open("127.0.0.1", 1025)
+    imap_mock_active = is_port_open("127.0.0.1", 1143)
+
+    if smtp_mock_active and imap_mock_active:
+        st.success("🟢 **モックメールサーバー起動中**\n\nローカルでSMTP/IMAPを使用した完全な送受信テストが可能です。")
+    else:
+        st.info("ℹ️ **モックメールサーバー停止中**\n\nGmail等の代わりにローカルでSMTP/IMAPの送受信テストを行うには、以下でモックサーバーを起動できます：\n`python app/mock_mail_server.py`")
+        
+    if st.button("🔌 モック設定を自動ロード"):
+        st.session_state.sender_email = "bot@local.test"
+        st.session_state.sender_password = "dummypassword"
+        st.session_state.smtp_server = "127.0.0.1"
+        st.session_state.smtp_port = 1025
+        st.session_state.imap_server = "127.0.0.1"
+        st.session_state.imap_port = 1143
+        st.success("モック設定をロードしました。下の保存ボタンを押して適用してください。")
+        time.sleep(1)
+        st.rerun()
+
     sender_mail_input = st.text_input("ボット送信元メールアドレス:", value=st.session_state.sender_email)
     sender_pwd_input = st.text_input("ボットアプリパスワード:", value=st.session_state.sender_password, type="password")
     

@@ -54,17 +54,19 @@ if [ "$SETUP_MODE" = "2" ]; then
         PYTHON_CMD="python3"
     fi
 
-    # バックグラウンドでモックサーバーが動いていないか確認し、動いていなければ起動
-    # macOS/Bashでポートの確認には nc または lsof を使用
-    if ! nc -z 127.0.0.1 1025 >/dev/null 2>&1; then
-        echo "[*] モックメールサーバーをバックグラウンドで起動しています..."
-        $PYTHON_CMD app/mock_mail_server.py > /tmp/mock_mail_server.log 2>&1 &
-        MOCK_PID=$!
-        echo "[+] モックメールサーバーが起動しました (PID: $MOCK_PID)。"
+    # 既存のモックメールサーバープロセスがあれば再起動のために終了する
+    MOCK_PIDS=$(ps aux | grep "mock_mail_server.py" | grep -v grep | awk '{print $2}')
+    if [ -n "$MOCK_PIDS" ]; then
+        echo "[*] 既存のモックメールサーバープロセス (PID: $MOCK_PIDS) を終了しています..."
+        kill -9 $MOCK_PIDS >/dev/null 2>&1
         sleep 1
-    else
-        echo "[+] モックメールサーバーはすでに起動しています。"
     fi
+
+    echo "[*] モックメールサーバーをバックグラウンドで起動しています..."
+    $PYTHON_CMD app/mock_mail_server.py > /tmp/mock_mail_server.log 2>&1 &
+    MOCK_PID=$!
+    echo "[+] モックメールサーバーが起動しました (PID: $MOCK_PID)。"
+    sleep 1
 else
     echo ""
     echo "--- 📧 1. ボット用メールアドレスの設定 ---"
