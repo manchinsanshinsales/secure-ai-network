@@ -5,7 +5,7 @@ provider "azurerm" {
 # 1. リソースグループの作成
 resource "azurerm_resource_group" "rg" {
   name     = var.azure_resource_group_name
-  location = var.azure_location;
+  location = var.azure_location
 }
 
 # 2. VNet & Subnet
