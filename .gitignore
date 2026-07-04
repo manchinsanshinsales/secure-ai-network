@@ -16,3 +16,8 @@ crash.log
 
 # OS
 .DS_Store
+
+# Environment Secrets
+.env
+.env.backup
+

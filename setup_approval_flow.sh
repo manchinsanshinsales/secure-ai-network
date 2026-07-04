@@ -26,45 +26,85 @@ if [ -f "$ENV_FILE" ]; then
     echo "[+] 既存のファイルを ${ENV_FILE}.backup にバックアップしました。"
 fi
 
-# 2. 対話形式での設定値の入力
+# 2. セットアップモードの選択
 echo ""
-echo "--- 📧 1. ボット用メールアドレスの設定 ---"
-echo "※ 承認依頼メールを送信し、返信を受信するボット専用のアカウントを使用してください。"
-echo "※ Gmailを使用する場合、事前に『2段階認証』を有効にし、『アプリパスワード』を発行する必要があります。"
-echo ""
+echo "--- 🛠️ セットアップモードの選択 ---"
+echo "1) 本物のメールサーバーを使用する (Gmailのアプリパスワード等が必要)"
+echo "2) ローカルのモックメールサーバーを使用する (Gmail不要、テストがローカルで完結)"
+read -p "選択 (1/2, デフォルト: 1): " SETUP_MODE
+SETUP_MODE=${SETUP_MODE:-"1"}
 
-read -p "ボットのメールアドレス (SENDER_EMAIL): " SENDER_EMAIL
-while [ -z "$SENDER_EMAIL" ]; do
-    echo "[-] エラー: メールアドレスは必須です。"
+if [ "$SETUP_MODE" = "2" ]; then
+    echo ""
+    echo "[*] ローカルのモックメールサーバー用設定を適用します。"
+    SENDER_EMAIL="bot@local.test"
+    SENDER_PASSWORD="dummypassword"
+    SMTP_SERVER="127.0.0.1"
+    SMTP_PORT="1025"
+    IMAP_SERVER="127.0.0.1"
+    IMAP_PORT="1143"
+    APPROVER_EMAIL="makoto.insidesales@gmail.com"
+    
+    # venvのpythonがある場合はそれを優先的に使用
+    if [ -f "./venv/bin/python" ]; then
+        PYTHON_CMD="./venv/bin/python"
+    elif [ -f "./venv/bin/python3" ]; then
+        PYTHON_CMD="./venv/bin/python3"
+    else
+        PYTHON_CMD="python3"
+    fi
+
+    # バックグラウンドでモックサーバーが動いていないか確認し、動いていなければ起動
+    # macOS/Bashでポートの確認には nc または lsof を使用
+    if ! nc -z 127.0.0.1 1025 >/dev/null 2>&1; then
+        echo "[*] モックメールサーバーをバックグラウンドで起動しています..."
+        $PYTHON_CMD app/mock_mail_server.py > /tmp/mock_mail_server.log 2>&1 &
+        MOCK_PID=$!
+        echo "[+] モックメールサーバーが起動しました (PID: $MOCK_PID)。"
+        sleep 1
+    else
+        echo "[+] モックメールサーバーはすでに起動しています。"
+    fi
+else
+    echo ""
+    echo "--- 📧 1. ボット用メールアドレスの設定 ---"
+    echo "※ 承認依頼メールを送信し、返信を受信するボット専用のアカウントを使用してください。"
+    echo "※ Gmailを使用する場合、事前に『2段階認証』を有効にし、『アプリパスワード』を発行する必要があります。"
+    echo ""
+
     read -p "ボットのメールアドレス (SENDER_EMAIL): " SENDER_EMAIL
-done
+    while [ -z "$SENDER_EMAIL" ]; do
+        echo "[-] エラー: メールアドレスは必須です。"
+        read -p "ボットのメールアドレス (SENDER_EMAIL): " SENDER_EMAIL
+    done
 
-read -s -p "ボットのアプリパスワード (SENDER_PASSWORD): " SENDER_PASSWORD
-echo ""
-while [ -z "$SENDER_PASSWORD" ]; do
-    echo "[-] エラー: パスワードは必須です。"
     read -s -p "ボットのアプリパスワード (SENDER_PASSWORD): " SENDER_PASSWORD
     echo ""
-done
+    while [ -z "$SENDER_PASSWORD" ]; do
+        echo "[-] エラー: パスワードは必須です。"
+        read -s -p "ボットのアプリパスワード (SENDER_PASSWORD): " SENDER_PASSWORD
+        echo ""
+    done
 
-echo ""
-echo "--- ⚙️  2. メールサーバーの詳細設定 ---"
-read -p "SMTP サーバー (デフォルト: smtp.gmail.com): " SMTP_SERVER
-SMTP_SERVER=${SMTP_SERVER:-"smtp.gmail.com"}
+    echo ""
+    echo "--- ⚙️  2. メールサーバーの詳細設定 ---"
+    read -p "SMTP サーバー (デフォルト: smtp.gmail.com): " SMTP_SERVER
+    SMTP_SERVER=${SMTP_SERVER:-"smtp.gmail.com"}
 
-read -p "SMTP ポート (デフォルト: 587): " SMTP_PORT
-SMTP_PORT=${SMTP_PORT:-"587"}
+    read -p "SMTP ポート (デフォルト: 587): " SMTP_PORT
+    SMTP_PORT=${SMTP_PORT:-"587"}
 
-read -p "IMAP サーバー (デフォルト: imap.gmail.com): " IMAP_SERVER
-IMAP_SERVER=${IMAP_SERVER:-"imap.gmail.com"}
+    read -p "IMAP サーバー (デフォルト: imap.gmail.com): " IMAP_SERVER
+    IMAP_SERVER=${IMAP_SERVER:-"imap.gmail.com"}
 
-read -p "IMAP ポート (デフォルト: 993): " IMAP_PORT
-IMAP_PORT=${IMAP_PORT:-"993"}
+    read -p "IMAP ポート (デフォルト: 993): " IMAP_PORT
+    IMAP_PORT=${IMAP_PORT:-"993"}
 
-echo ""
-echo "--- 👥 3. 承認者の設定 ---"
-read -p "承認者のメールアドレス (デフォルト: makoto.insidesales@gmail.com): " APPROVER_EMAIL
-APPROVER_EMAIL=${APPROVER_EMAIL:-"makoto.insidesales@gmail.com"}
+    echo ""
+    echo "--- 👥 3. 承認者の設定 ---"
+    read -p "承認者のメールアドレス (デフォルト: makoto.insidesales@gmail.com): " APPROVER_EMAIL
+    APPROVER_EMAIL=${APPROVER_EMAIL:-"makoto.insidesales@gmail.com"}
+fi
 
 # 3. .env ファイルの生成
 echo ""

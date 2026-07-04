@@ -15,9 +15,16 @@ from typing import Optional, Tuple
 # .env ファイルがある場合は自動読み込み
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    # スクリプトの親の親ディレクトリ（プロジェクトルート）にある.envを明示的に指定
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env_path = os.path.join(base_dir, '.env')
+    if os.path.exists(env_path):
+        load_dotenv(dotenv_path=env_path)
+    else:
+        load_dotenv()
 except ImportError:
     pass
+
 
 
 # デフォルト設定
@@ -25,7 +32,7 @@ DEFAULT_SMTP_SERVER = "smtp.gmail.com"
 DEFAULT_SMTP_PORT = 587
 DEFAULT_IMAP_SERVER = "imap.gmail.com"
 DEFAULT_IMAP_PORT = 993
-DEFAULT_APPROVER = "makoto.insidesales@gmail.com"
+DEFAULT_APPROVER = os.getenv("APPROVER_EMAIL", "makoto.insidesales@gmail.com")
 
 def test_connection(
     sender_email: str,
@@ -47,7 +54,11 @@ def test_connection(
     try:
         print(f"[*] SMTP接続テスト中: {smtp_server}:{smtp_port} ...")
         server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
+        if smtp_server not in ("127.0.0.1", "localhost"):
+            try:
+                server.starttls()
+            except Exception as e:
+                print(f"[*] STARTTLSがサポートされていないかスキップされました: {e}")
         print(f"[*] SMTPログイン中: {sender_email} ...")
         server.login(sender_email, sender_password)
         server.quit()
@@ -60,7 +71,10 @@ def test_connection(
     imap_success = False
     try:
         print(f"[*] IMAP接続テスト中: {imap_server}:{imap_port} ...")
-        mail = imaplib.IMAP4_SSL(imap_server, imap_port)
+        if imap_server in ("127.0.0.1", "localhost"):
+            mail = imaplib.IMAP4(imap_server, imap_port)
+        else:
+            mail = imaplib.IMAP4_SSL(imap_server, imap_port)
         print(f"[*] IMAPログイン中: {sender_email} ...")
         mail.login(sender_email, sender_password)
         mail.logout()
@@ -121,7 +135,11 @@ def send_approval_request(
     try:
         print(f"[*] 承認依頼メールを送信中... 送信元: {sender_email} -> 宛先: {approver}")
         server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
+        if smtp_server not in ("127.0.0.1", "localhost"):
+            try:
+                server.starttls()
+            except Exception as e:
+                print(f"[*] STARTTLSがサポートされていないかスキップされました: {e}")
         server.login(sender_email, sender_password)
         server.sendmail(sender_email, [approver], msg.as_string())
         server.quit()
@@ -184,7 +202,10 @@ def check_for_approval(
     """
     try:
         # SSL接続
-        mail = imaplib.IMAP4_SSL(imap_server, imap_port)
+        if imap_server in ("127.0.0.1", "localhost"):
+            mail = imaplib.IMAP4(imap_server, imap_port)
+        else:
+            mail = imaplib.IMAP4_SSL(imap_server, imap_port)
         mail.login(sender_email, sender_password)
         mail.select("inbox")
 
@@ -231,16 +252,20 @@ def check_for_approval(
                             content_type = part.get_content_type()
                             content_disposition = str(part.get("Content-Disposition"))
                             if content_type == "text/plain" and "attachment" not in content_disposition:
-                                try:
-                                    body = part.get_payload(decode=True).decode("utf-8", errors="ignore")
-                                except Exception:
-                                    body = part.get_payload(decode=True).decode("iso-2022-jp", errors="ignore")
+                                payload = part.get_payload(decode=True)
+                                if payload:
+                                    try:
+                                        body = payload.decode("utf-8", errors="ignore")
+                                    except Exception:
+                                        body = payload.decode("iso-2022-jp", errors="ignore")
                                 break
                     else:
-                        try:
-                            body = msg.get_payload(decode=True).decode("utf-8", errors="ignore")
-                        except Exception:
-                            body = msg.get_payload(decode=True).decode("iso-2022-jp", errors="ignore")
+                        payload = msg.get_payload(decode=True)
+                        if payload:
+                            try:
+                                body = payload.decode("utf-8", errors="ignore")
+                            except Exception:
+                                body = payload.decode("iso-2022-jp", errors="ignore")
                     
                     reply_text = extract_reply_content(body)
                     reply_upper = reply_text.upper()

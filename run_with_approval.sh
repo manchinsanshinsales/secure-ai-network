@@ -7,10 +7,16 @@
 # 承認者はデフォルトで makoto.insidesales@gmail.com に設定されています。
 # ==============================================================================
 
+# .env ファイルがあれば読み込む
+if [ -f .env ]; then
+    # コメント行を除外してエクスポート
+    export $(grep -v '^#' .env | xargs)
+fi
+
 # 引数チェック
 TASK_NAME=$1
 COMMAND_TO_RUN=$2
-APPROVER="makoto.insidesales@gmail.com"
+APPROVER=${APPROVER_EMAIL:-"makoto.insidesales@gmail.com"}
 EXTRA_ARGS=""
 
 if [ -z "$TASK_NAME" ] || [ -z "$COMMAND_TO_RUN" ]; then

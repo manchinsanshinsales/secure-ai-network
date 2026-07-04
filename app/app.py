@@ -9,6 +9,13 @@ import subprocess
 # 同一ディレクトリのモジュールをインポートできるようにパスを追加
 sys.path.append(os.path.dirname(__file__))
 
+# .env ファイルがある場合は自動読み込み
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from dlp import SecureDlpManager
 from ai_client import SecureAiClient
 from approval_flow import send_approval_request, check_for_approval, DEFAULT_APPROVER

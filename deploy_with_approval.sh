@@ -8,8 +8,14 @@
 # 承認が得られた場合のみ自動的に適用 (apply) を実行する実用的なデプロイフローです。
 # ==============================================================================
 
+# .env ファイルがあれば読み込む
+if [ -f .env ]; then
+    # コメント行を除外してエクスポート
+    export $(grep -v '^#' .env | xargs)
+fi
+
 # デフォルト設定
-APPROVER="makoto.insidesales@gmail.com"
+APPROVER=${APPROVER_EMAIL:-"makoto.insidesales@gmail.com"}
 SIMULATE_FLAG=""
 TARGET_CLOUD="azure" # "azure" または "gcp"
 
