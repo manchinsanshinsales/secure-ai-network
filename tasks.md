@@ -5,6 +5,7 @@
 - [ ] [期限: 2026-08-25] PCMLE（機械学習エンジニア）試験の受験と合格 #学習 #PCMLE
 
 ## 🟡 中優先度
+- [ ] [期限: 2026-07-25] オンプレ移行LLM比較検証レポート (docs/onprem_migration_llm_comparison_report.md) の作成 #学習 #AI #オンプレ移行
 - [ ] [期限: 2026-07-20] マルチクラウドキーレス認証標準化 PoC 設計書 (docs/multi_cloud_keyless_poc_spec.md) の作成 #学習 #マルチクラウド #セキュリティ
 - [ ] [期限: 2026-09-30] GitHub Actions ✖️ Cloud Run ✖️ Azure App Service キーレス自動デプロイデモ構築 #学習 #DevOps #マルチクラウド
 - [ ] [期限: なし] GWS ⇄ GCP 連携デモ（顧客フィードバック自動要約＆分析ツール）の構築 #学習 #AI #GWS
