@@ -1,6 +1,7 @@
 # Python
 venv/
-__pycache__/
+.venv/
+**/__pycache__/
 *.pyc
 .pytest_cache/
 
@@ -21,3 +22,9 @@ crash.log
 .env
 .env.backup
 
+# Project Specific
+*.sqlite*
+autopush.sh
+.tmp.driveupload/
+.tmp.drivedownload/
+.tmp.*
