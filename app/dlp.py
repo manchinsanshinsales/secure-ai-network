@@ -17,8 +17,9 @@ class SecureDlpManager:
         # アナライザーエンジンの初期化を試行
         try:
             self.analyzer = AnalyzerEngine()
-        except Exception:
-            # NLPモデルがロードできない場合は analyzer=None とし、
+        except (Exception, SystemExit):
+            # NLPモデルがロードできない場合（spaCyのモデルダウンロード失敗時は
+            # SystemExitが送出されるため、これも含めて捕捉する）は analyzer=None とし、
             # 自前のフォールバック認識ロジックを使用する
             self.analyzer = None
 
@@ -143,7 +144,7 @@ class SecureDlpManager:
                             end = match.start() + val_match.end()
 
                     results.append(RecognizerResult(
-                        entity_type=recognizer.supported_entity,
+                        entity_type=recognizer.supported_entities[0],
                         start=start,
                         end=end,
                         score=pattern.score
