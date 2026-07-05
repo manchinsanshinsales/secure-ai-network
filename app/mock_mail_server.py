@@ -233,25 +233,25 @@ def handle_imap_client(client_socket):
     finally:
         client_socket.close()
 
-def start_smtp_server(port=1025):
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server.bind(("127.0.0.1", port))
-    server.listen(5)
-    print(f"[Mock Mail Server] SMTP Server listening on 127.0.0.1:{port}...")
+def start_smtp_server(server_socket):
+    print(f"[Mock Mail Server] SMTP Server listening on 127.0.0.1:1025...")
     while True:
-        client, addr = server.accept()
-        threading.Thread(target=handle_smtp_client, args=(client,), daemon=True).start()
+        try:
+            client, addr = server_socket.accept()
+            threading.Thread(target=handle_smtp_client, args=(client,), daemon=True).start()
+        except Exception as e:
+            print(f"[Mock SMTP Accept Error] {e}")
+            break
 
-def start_imap_server(port=1143):
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server.bind(("127.0.0.1", port))
-    server.listen(5)
-    print(f"[Mock Mail Server] IMAP Server listening on 127.0.0.1:{port}...")
+def start_imap_server(server_socket):
+    print(f"[Mock Mail Server] IMAP Server listening on 127.0.0.1:1143...")
     while True:
-        client, addr = server.accept()
-        threading.Thread(target=handle_imap_client, args=(client,), daemon=True).start()
+        try:
+            client, addr = server_socket.accept()
+            threading.Thread(target=handle_imap_client, args=(client,), daemon=True).start()
+        except Exception as e:
+            print(f"[Mock IMAP Accept Error] {e}")
+            break
 
 if __name__ == "__main__":
     print("==================================================")
@@ -261,8 +261,23 @@ if __name__ == "__main__":
     print("   Auto-Approve Delay: 2 seconds")
     print("==================================================")
     
-    smtp_thread = threading.Thread(target=start_smtp_server, args=(1025,), daemon=True)
-    imap_thread = threading.Thread(target=start_imap_server, args=(1143,), daemon=True)
+    try:
+        smtp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        smtp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        smtp_socket.bind(("127.0.0.1", 1025))
+        smtp_socket.listen(5)
+        
+        imap_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        imap_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        imap_socket.bind(("127.0.0.1", 1143))
+        imap_socket.listen(5)
+    except Exception as e:
+        print(f"[-] Failed to bind mock mail server ports: {e}")
+        import sys
+        sys.exit(1)
+        
+    smtp_thread = threading.Thread(target=start_smtp_server, args=(smtp_socket,), daemon=True)
+    imap_thread = threading.Thread(target=start_imap_server, args=(imap_socket,), daemon=True)
     
     smtp_thread.start()
     imap_thread.start()
@@ -272,3 +287,4 @@ if __name__ == "__main__":
             time.sleep(1)
     except KeyboardInterrupt:
         print("\n[Mock Mail Server] Stopping...")
+

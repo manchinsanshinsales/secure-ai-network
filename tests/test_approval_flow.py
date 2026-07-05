@@ -239,4 +239,53 @@ Subject: Re: [APPROVAL REQUIRED] Task: Test Task (ID: test1234)
     instance.store.assert_called_with(b"101", "+FLAGS", "\\Seen")
 
 
+@patch("imaplib.IMAP4_SSL")
+def test_check_for_approval_prevention_of_false_positives(mock_imap):
+    """'I cannot approve' や 'Not approved' といった否定形文での誤承認防止テスト"""
+    instance = mock_imap.return_value
+    instance.select.return_value = ("OK", [b"1"])
+    instance.search.return_value = ("OK", [b"101"])
+    
+    # 送信元の確認も含める
+    raw_email_data = b"""From: makoto.insidesales@gmail.com
+Subject: Re: [APPROVAL REQUIRED] Task: Test Task (ID: test1234)
+
+I cannot approve this request because of security policy.
+"""
+    instance.fetch.return_value = ("OK", [(b"101 (RFC822 {150}", raw_email_data), b")"])
+    
+    status, comment = check_for_approval(
+        task_id="test1234",
+        approver="makoto.insidesales@gmail.com",
+        sender_email="bot@example.com",
+        sender_password="password",
+        imap_server="imap.example.com",
+        imap_port=993
+    )
+    
+    # 承認されないはず
+    assert status is None
+    assert comment is None
+
+
+def test_extract_reply_content_outlook_and_japanese_headers():
+    """Outlookの区切り線や日本語の引用ヘッダーに対する判定テスト"""
+    # 1. Outlookの区切り線 (___) を含むメール
+    body_outlook = """APPROVE.
+________________________________
+From: bot@example.com
+Sent: Sunday, July 5, 2026 8:01 AM
+To: makoto.insidesales@gmail.com
+"""
+    assert extract_reply_content(body_outlook) == "APPROVE."
+
+    # 2. 日本語の引用ヘッダーを含むメール
+    body_japanese = """了解しました。進めてください。
+2026年7月5日(日) 8:01 bot <bot@example.com>:
+> 以下のタスク実行の承認を求めています。
+"""
+    assert extract_reply_content(body_japanese) == "了解しました。進めてください。"
+
+
+
 

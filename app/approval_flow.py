@@ -10,7 +10,11 @@ from email.mime.text import MIMEText
 from email.header import decode_header
 import subprocess
 import argparse
+import socket
 from typing import Optional, Tuple
+
+# 全てのソケット通信のタイムアウトを30秒に設定
+socket.setdefaulttimeout(30.0)
 
 # .env ファイルがある場合は自動読み込み
 try:
@@ -158,7 +162,7 @@ def extract_reply_content(body: str) -> str:
     lines = body.splitlines()
     reply_lines = []
     
-    # 一般的な引用開始パターン
+    # 一般的な引用開始パターンおよび区切り線のパターン
     quote_headers = [
         re.compile(r"^\s*on\s+.*wrote:\s*$", re.IGNORECASE),
         re.compile(r"^\s*-+\s*original\s+message\s*-+\s*$", re.IGNORECASE),
@@ -166,7 +170,11 @@ def extract_reply_content(body: str) -> str:
         re.compile(r"^\s*Sent:\s+.*", re.IGNORECASE),
         re.compile(r"^\s*To:\s+.*", re.IGNORECASE),
         re.compile(r"^\s*Subject:\s+.*", re.IGNORECASE),
-        re.compile(r"^\s*\d{4}[-/.]\d{2}[-/.]\d{2}\s+\d{2}:\d{2}.*:$")
+        re.compile(r"^\s*Date:\s+.*", re.IGNORECASE),
+        re.compile(r"^\s*\d{4}[-/.]\d{2}[-/.]\d{2}\s+\d{2}:\d{2}.*:$"),
+        re.compile(r"^\s*\d{4}\s*[年/-]\s*\d{1,2}\s*[月/-]\s*\d{1,2}\s*日?.*:\s*$", re.IGNORECASE),
+        re.compile(r"^\s*_{3,}\s*$"), # Outlook horizontal lines
+        re.compile(r"^\s*-{3,}\s*$")  # standard divider dashes
     ]
     
     for line in lines:
@@ -275,23 +283,30 @@ def check_for_approval(
                                 body = payload.decode("iso-2022-jp", errors="ignore")
                     
                     reply_text = extract_reply_content(body)
-                    reply_upper = reply_text.upper()
                     
-                    # 承認・却下キーワードの定義 (より柔軟な返信に対応)
-                    # 英語キーワードは部分一致による誤判定（例: REVIEWING の "NG"）を防ぐため単語境界(\b)を使用
-                    approve_en = ["APPROVE", "OK", "PROCEED"]
-                    reject_en = ["REJECT", "NG", "CANCEL"]
+                    # 承認・却下キーワードの定義と安全性向上のための前方一致(startswith)チェック
+                    # 文頭の記号・スペースを取り除いた上で、最初の単語がキーワードかどうか判定します。
+                    # これにより、"I cannot approve" のように部分一致してしまう誤検知を防ぎます。
+                    clean_reply = re.sub(r'^[^a-zA-Z0-9\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]+', '', reply_text).strip()
+                    clean_reply_upper = clean_reply.upper()
+                    
+                    approve_en = ["APPROVE", "APPROVED", "OK", "PROCEED"]
+                    reject_en = ["REJECT", "REJECTED", "NG", "CANCEL", "CANCELLED"]
                     
                     approve_ja = ["承認", "許可", "了解"]
                     reject_ja = ["却下", "不可"]
                     
+                    def starts_with_word(text_upper, keyword):
+                        pattern = rf"^{keyword}\b"
+                        return bool(re.match(pattern, text_upper))
+                    
                     is_approved = (
-                        any(re.search(rf"\b{kw}\b", reply_upper) for kw in approve_en) or
-                        any(kw in reply_text for kw in approve_ja)
+                        any(starts_with_word(clean_reply_upper, kw) for kw in approve_en) or
+                        any(clean_reply.startswith(kw) for kw in approve_ja)
                     )
                     is_rejected = (
-                        any(re.search(rf"\b{kw}\b", reply_upper) for kw in reject_en) or
-                        any(kw in reply_text for kw in reject_ja)
+                        any(starts_with_word(clean_reply_upper, kw) for kw in reject_en) or
+                        any(clean_reply.startswith(kw) for kw in reject_ja)
                     )
                     
                     # 承認・却下キーワードの確認
