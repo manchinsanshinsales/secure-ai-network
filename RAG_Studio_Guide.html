@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>On-Premise RAG Studio - 接続・利用ガイド</title>
+    <style>
+        :root {
+            --bg-color: #13151A;
+            --card-bg: #1E222B;
+            --border-color: #2D313E;
+            --text-primary: #E2E8F0;
+            --text-secondary: #94A3B8;
+            --accent-color: #4F46E5;
+            --accent-hover: #4338CA;
+            --success-color: #10B981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo-area {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--accent-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 20px;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        .section {
+            margin-bottom: 32px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        /* URL Generator Box */
+        .url-generator {
+            background: rgba(79, 70, 229, 0.1);
+            border: 1px solid var(--accent-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: #13151A;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent-color);
+        }
+
+        .btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .result-box {
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            background: #13151A;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 14px;
+            justify-content: space-between;
+        }
+
+        .result-url {
+            color: var(--success-color);
+            text-decoration: none;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-right: 12px;
+        }
+
+        .copy-badge {
+            background: var(--border-color);
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            user-select: none;
+            color: var(--text-secondary);
+        }
+
+        .copy-badge:hover {
+            background: #3A3F50;
+            color: white;
+        }
+
+        /* Step List */
+        .steps {
+            list-style: none;
+        }
+
+        .step-item {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .step-number {
+            width: 24px;
+            height: 24px;
+            background: var(--border-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .step-content h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .step-content p {
+            margin-bottom: 0;
+        }
+
+        .badge-secure {
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+            border: 1px solid var(--success-color);
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="logo-area">
+            <div class="logo-icon">M</div>
+            <h1>On-Premise RAG Studio</h1>
+        </div>
+        <div>
+            <span class="badge-secure">完全ローカル・オフライン動作</span>
+        </div>
+        <p class="subtitle">同じネットワーク内からブラウザでアクセスするためのガイドポータルです。</p>
+    </header>
+
+    <!-- URL Generator Section -->
+    <div class="section">
+        <h2>🔗 アクセスURLの取得</h2>
+        <p>ホストPC（アプリを起動しているPC）のIPアドレスを入力すると、他のPCからアクセスするための専用URLを生成します。</p>
+        
+        <div class="url-generator">
+            <label for="ip-address" style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">ホストPCのローカルIPアドレスを入力してください:</label>
+            <div class="input-group">
+                <input type="text" id="ip-address" placeholder="例: 192.168.1.5" value="127.0.0.1">
+                <button class="btn" onclick="generateURL()">URLを生成</button>
+            </div>
+            
+            <div class="result-box">
+                <a href="http://127.0.0.1:8551/" id="generated-link" class="result-url" target="_blank">http://127.0.0.1:8551/</a>
+                <span class="copy-badge" onclick="copyURL()" id="copy-btn">コピー</span>
+            </div>
+        </div>
+        <div style="text-align: center; margin-top: 10px;">
+            <a href="http://127.0.0.1:8551/" id="direct-btn" class="btn btn-success" target="_blank" style="width: 100%;">このPCから RAG Studio を開く</a>
+        </div>
+    </div>
+
+    <!-- Quick Guide Section -->
+    <div class="section">
+        <h2>📖 かんたん使い方ガイド</h2>
+        <ul class="steps">
+            <li class="step-item">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>ドキュメントの登録</h3>
+                    <p>左側のサイドバーにある「ファイルを登録」ボタンから、PDF、TXT、またはMarkdownファイルを選択します。自動的に読み込みとベクトル化が行われます。</p>
+                </div>
+            </li>
+            <li class="step-item">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>質問を入力</h3>
+                    <p>下のチャット入力欄に、登録したドキュメントについて質問を日本語で入力し、送信します。</p>
+                </div>
+            </li>
+            <li class="step-item">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>回答と引用元の確認</h3>
+                    <p>AI（Gemma 4）が社内データのみを参照して回答を生成します。回答の下部には、類似度の高い引用元ドキュメントとパーセンテージ（%）が表示されます。</p>
+                </div>
+            </li>
+        </ul>
+    </div>
+
+    <!-- System Spec Section -->
+    <div class="section" style="border-bottom: none;">
+        <h2>🔒 セキュリティと仕様</h2>
+        <p>本システムは完全ローカル環境向けに構築されており、社外のインターネットや外部クラウドサービスに対してデータを一切送信しません。機密ドキュメントも安全にインデックス化・照会できます。</p>
+    </div>
+</div>
+
+<script>
+    function generateURL() {
+        const ipInput = document.getElementById('ip-address').value.trim();
+        const generatedLink = document.getElementById('generated-link');
+        const directBtn = document.getElementById('direct-btn');
+        
+        if (!ipInput) {
+            alert('IPアドレスを入力してください。');
+            return;
+        }
+
+        const newURL = `http://${ipInput}:8551/`;
+        generatedLink.href = newURL;
+        generatedLink.textContent = newURL;
+        
+        // ローカルの場合はlocalhostで開くようにボタンを維持、それ以外は生成したURLをボタンに適用
+        directBtn.href = newURL;
+        directBtn.textContent = ipInput === '127.0.0.1' || ipInput === 'localhost' 
+            ? 'このPCから RAG Studio を開く' 
+            : `ブラウザで RAG Studio を開く (${ipInput})`;
+    }
+
+    function copyURL() {
+        const urlText = document.getElementById('generated-link').textContent;
+        navigator.clipboard.writeText(urlText).then(() => {
+            const copyBtn = document.getElementById('copy-btn');
+            copyBtn.textContent = 'コピー完了！';
+            copyBtn.style.background = 'var(--success-color)';
+            copyBtn.style.color = 'white';
+            
+            setTimeout(() => {
+                copyBtn.textContent = 'コピー';
+                copyBtn.style.background = 'var(--border-color)';
+                copyBtn.style.color = 'var(--text-secondary)';
+            }, 2000);
+        }).catch(err => {
+            console.error('コピーに失敗しました: ', err);
+        });
+    }
+</script>
+</body>
+</html>

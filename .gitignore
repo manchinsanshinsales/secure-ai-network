@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+rag_database.db
+uploads/
+.claude/
+.gemini/
