@@ -96,6 +96,30 @@ def main(page: ft.Page):
             bgcolor="red800" if is_error else "green800"
         ))
 
+    status_dot = ft.Container(width=8, height=8, bgcolor="amber400", border_radius=4)
+    status_text = ft.Text("Checking Ollama status...", size=12, color="#94A3B8")
+
+    async def check_ollama(e=None):
+        model = llm_model_ref
+        embed_model = rag.DEFAULT_EMBED
+        
+        def run_check():
+            ok, missing = rag.check_ollama_status(model, embed_model)
+            if not ok:
+                status_dot.bgcolor = "red400"
+                status_text.value = "Ollama Disconnected (127.0.0.1:11434)"
+                show_toast("Ollamaに接続できません。Ollamaが起動しているか確認してください。", is_error=True)
+            elif missing:
+                status_dot.bgcolor = "amber400"
+                status_text.value = f"Ollama Warning (Missing {', '.join(missing)})"
+                show_toast(f"必要なモデルがロードされていません: {', '.join(missing)}", is_error=True)
+            else:
+                status_dot.bgcolor = "green400"
+                status_text.value = f"Ollama Connected (127.0.0.1:11434)"
+            page.update()
+            
+        threading.Thread(target=run_check, daemon=True).start()
+
     # Load and render indexed documents
     def refresh_document_list():
         doc_list_column.controls.clear()
@@ -362,6 +386,7 @@ def main(page: ft.Page):
     def on_model_change(e):
         nonlocal llm_model_ref
         llm_model_ref = e.control.value.strip()
+        page.run_task(check_ollama)
 
     def export_chat_history(e):
         import datetime
@@ -532,8 +557,8 @@ def main(page: ft.Page):
             ft.Container(
                 content=ft.Row([
                     ft.Row([
-                        ft.Container(width=8, height=8, bgcolor="green400", border_radius=4),
-                        ft.Text("Ollama Connected (127.0.0.1:11434)", size=12, color="#94A3B8")
+                        status_dot,
+                        status_text
                     ], spacing=8),
                     ft.Row([
                         ft.IconButton(
@@ -573,6 +598,7 @@ def main(page: ft.Page):
 
     # Initial document listing load
     refresh_document_list()
+    page.run_task(check_ollama)
 
     # Overall page structure
     page.add(

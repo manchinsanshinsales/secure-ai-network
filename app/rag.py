@@ -198,3 +198,40 @@ def query_rag_stream(query, system_prompt=None, top_k=3, llm_model=DEFAULT_LLM):
         except Exception as e:
             # Skip invalid JSON or decoding errors
             continue
+
+def check_ollama_status(llm_model=DEFAULT_LLM, embed_model=DEFAULT_EMBED):
+    """Checks if Ollama is running and the required models are pulled.
+    Returns:
+        (connection_ok, missing_models) where:
+        - connection_ok: bool
+        - missing_models: list of missing model names
+    """
+    try:
+        response = requests.get(f"{OLLAMA_URL}/api/tags", timeout=3)
+        if response.status_code != 200:
+            return False, [llm_model, embed_model]
+        
+        data = response.json()
+        available_models = []
+        for m in data.get("models", []):
+            name = m.get("name", "")
+            available_models.append(name)
+            
+        def has_model(target):
+            # Check for exact match or strip tag (e.g. nomic-embed-text:latest vs nomic-embed-text)
+            target_base = target.split(":")[0]
+            for am in available_models:
+                am_base = am.split(":")[0]
+                if am == target or am_base == target or am_base == target_base:
+                    return True
+            return False
+            
+        missing = []
+        if not has_model(llm_model):
+            missing.append(llm_model)
+        if not has_model(embed_model):
+            missing.append(embed_model)
+            
+        return True, missing
+    except requests.exceptions.RequestException:
+        return False, [llm_model, embed_model]
