@@ -172,7 +172,7 @@ def main(page: ft.Page):
 
         threading.Thread(target=ingest, daemon=True).start()
 
-    async def pick_and_register(e):
+    async def pick_and_register(e=None):
         files = await file_picker.pick_files(
             allow_multiple=True,
             file_type=ft.FilePickerFileType.CUSTOM,
@@ -363,6 +363,86 @@ def main(page: ft.Page):
         nonlocal llm_model_ref
         llm_model_ref = e.control.value.strip()
 
+    def export_chat_history(e):
+        import datetime
+        if not chat_list.controls:
+            show_toast("エクスポートするチャット履歴がありません", is_error=True)
+            return
+            
+        md_lines = []
+        md_lines.append("# On-Premise RAG Studio チャット履歴")
+        md_lines.append(f"エクスポート日時: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        
+        for row in chat_list.controls:
+            if not isinstance(row, ft.Row) or not row.controls:
+                continue
+            container = row.controls[0]
+            if not isinstance(container, ft.Container) or not isinstance(container.content, ft.Column):
+                continue
+            
+            column = container.content
+            speaker_text = column.controls[0].value if column.controls and hasattr(column.controls[0], "value") else ""
+            
+            if "ユーザー" in speaker_text:
+                query_text = column.controls[1].value if len(column.controls) > 1 and hasattr(column.controls[1], "value") else ""
+                md_lines.append(f"## 👤 {speaker_text}")
+                md_lines.append(f"{query_text}\n")
+                
+            elif "ローカルAI" in speaker_text:
+                md_lines.append(f"## 🤖 {speaker_text}")
+                
+                if len(column.controls) > 1:
+                    tile = column.controls[1]
+                    if isinstance(tile, ft.ExpansionTile) and tile.visible:
+                        try:
+                            thinking_val = tile.controls[0].content.value
+                            if thinking_val:
+                                md_lines.append("<details>")
+                                md_lines.append("<summary>思考プロセスを表示</summary>\n")
+                                md_lines.append(f"{thinking_val}\n")
+                                md_lines.append("</details>\n")
+                        except Exception:
+                            pass
+                
+                if len(column.controls) > 2:
+                    markdown_ctrl = column.controls[2]
+                    if isinstance(markdown_ctrl, ft.Markdown):
+                        md_lines.append(f"{markdown_ctrl.value}\n")
+                
+                if len(column.controls) > 3:
+                    src_container = column.controls[3]
+                    if isinstance(src_container, ft.Container) and src_container.visible:
+                        try:
+                            src_col = src_container.content
+                            src_row = src_col.controls[2]
+                            sources_list = []
+                            for src_item in src_row.controls:
+                                if isinstance(src_item, ft.Container) and hasattr(src_item.content, "value"):
+                                    sources_list.append(src_item.content.value)
+                            if sources_list:
+                                md_lines.append("**引用元ソース:**")
+                                for s in sources_list:
+                                    md_lines.append(f"- {s}")
+                                md_lines.append("")
+                        except Exception:
+                            pass
+            md_lines.append("---")
+            
+        try:
+            root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            exports_dir = os.path.join(root_dir, "exports")
+            os.makedirs(exports_dir, exist_ok=True)
+            
+            filename = f"chat_history_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+            filepath = os.path.join(exports_dir, filename)
+            
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write("\n".join(md_lines))
+                
+            show_toast(f"履歴を保存しました: exports/{filename}")
+        except Exception as ex:
+            show_toast(f"エクスポート失敗: {str(ex)}", is_error=True)
+
     # Layout Building
     sidebar = ft.Container(
         width=300,
@@ -381,7 +461,7 @@ def main(page: ft.Page):
             ft.Button(
                 "ファイルを登録 (PDF/TXT/MD)",
                 icon=ft.Icons.UPLOAD_FILE,
-                on_click=pick_and_register,
+                on_click=lambda e: page.run_task(pick_and_register, e),
                 style=ft.ButtonStyle(
                     bgcolor="indigo600",
                     color="white",
@@ -455,12 +535,20 @@ def main(page: ft.Page):
                         ft.Container(width=8, height=8, bgcolor="green400", border_radius=4),
                         ft.Text("Ollama Connected (127.0.0.1:11434)", size=12, color="#94A3B8")
                     ], spacing=8),
-                    ft.IconButton(
-                        icon=ft.Icons.HIGHLIGHT_REMOVE,
-                        icon_color="#6B7280",
-                        tooltip="チャット履歴をクリア",
-                        on_click=lambda _: (chat_list.controls.clear(), page.update())
-                    )
+                    ft.Row([
+                        ft.IconButton(
+                            icon=ft.Icons.SAVE_ALT,
+                            icon_color="#6B7280",
+                            tooltip="チャット履歴をエクスポート",
+                            on_click=export_chat_history
+                        ),
+                        ft.IconButton(
+                            icon=ft.Icons.HIGHLIGHT_REMOVE,
+                            icon_color="#6B7280",
+                            tooltip="チャット履歴をクリア",
+                            on_click=lambda _: (chat_list.controls.clear(), page.update())
+                        )
+                    ], spacing=5)
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                 padding=ft.Padding(20, 15, 20, 15),
                 border=ft.Border(bottom=ft.BorderSide(1, "#2D313E")),
