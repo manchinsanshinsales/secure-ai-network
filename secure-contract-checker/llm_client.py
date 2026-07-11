@@ -75,7 +75,7 @@ class GeminiClient(BaseLLMClient):
         except ImportError as exc:
             raise ImportError(
                 "google-generativeai is not installed. "
-                "Install dependencies before using GeminiClient."
+                "Install it with: pip install google-generativeai"
             ) from exc
 
         # Configure Gemini API client
