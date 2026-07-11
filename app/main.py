@@ -226,7 +226,37 @@ def main(page: ft.Page):
                 show_toast(f"「{f.name}」のデータを取得できませんでした", is_error=True)
 
         if resolved:
-            ingest_files(resolved)
+            try:
+                docs = db.get_all_documents()
+                existing_names = {doc[1] for doc in docs}
+            except Exception as ex:
+                show_toast(f"データベース取得エラー: {str(ex)}", is_error=True)
+                existing_names = set()
+
+            duplicates = [name for name, _ in resolved if name in existing_names]
+            
+            if duplicates:
+                def close_dlg(e):
+                    page.close(dlg)
+                
+                def handle_confirm(e):
+                    page.close(dlg)
+                    ingest_files(resolved)
+                
+                duplicate_names = ", ".join(duplicates)
+                dlg = ft.AlertDialog(
+                    modal=True,
+                    title=ft.Text("同名ファイルの上書き確認", weight=ft.FontWeight.BOLD),
+                    content=ft.Text(f"以下のファイルはすでに登録されています。上書き（再インデックス）しますか？\n\n{duplicate_names}"),
+                    actions=[
+                        ft.TextButton("はい（上書き）", on_click=handle_confirm),
+                        ft.TextButton("キャンセル", on_click=close_dlg)
+                    ],
+                    actions_alignment=ft.MainAxisAlignment.END
+                )
+                page.open(dlg)
+            else:
+                ingest_files(resolved)
 
     file_picker = ft.FilePicker()  # Serviceとして生成時にページへ自動登録される
 
