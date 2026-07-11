@@ -74,11 +74,11 @@ class GeminiClient(BaseLLMClient):
             import google.generativeai as genai
         except ImportError as exc:
             raise ImportError(
-                "google-generativeai がインストールされていません。"
-                " GeminiClient を利用するには依存関係をインストールしてください。"
+                "google-generativeai is not installed. "
+                "Install dependencies before using GeminiClient."
             ) from exc
 
-        # APIの構成
+        # Configure Gemini API client
         genai.configure(api_key=self.api_key)
         self.model = genai.GenerativeModel(self.model_name)
 
