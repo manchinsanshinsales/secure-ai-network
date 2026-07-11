@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 import os
-import google.generativeai as genai
 
 class BaseLLMClient(ABC):
     """
@@ -71,6 +70,14 @@ class GeminiClient(BaseLLMClient):
         self.api_key = api_key
         self.model_name = model_name
         
+        try:
+            import google.generativeai as genai
+        except ImportError as exc:
+            raise ImportError(
+                "google-generativeai がインストールされていません。"
+                " GeminiClient を利用するには依存関係をインストールしてください。"
+            ) from exc
+
         # APIの構成
         genai.configure(api_key=self.api_key)
         self.model = genai.GenerativeModel(self.model_name)
