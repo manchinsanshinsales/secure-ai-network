@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "question": "LINE Developersでボット用のWebhookを動作させるために、必ず有効（On）にする必要がある設定はどれですか？",
+    "options": [
+      "A. グループ・複数人トークへの参加",
+      "B. Webhookの利用 (Use Webhook)",
+      "C. 自動応答メッセージ (Auto-response messages)",
+      "D. あいさつメッセージ (Greeting messages)"
+    ],
+    "answer": 1,
+    "explanation": "LINEボットが外部プログラム（ReplitやDialogflow）と通信して自動応答するには、「Webhookの利用」を必ず有効にする必要があります。"
+  },
+  {
+    "id": 2,
+    "question": "LINE Official Account Manager（管理画面）で自動応答を設定する際、「チャットモード」と「Webhook」の関係として正しいものはどれですか？",
+    "options": [
+      "A. チャットモードをONにすると、Webhookは完全に利用できなくなる",
+      "B. 外部プログラムで自動応答させる場合、応答設定で「Webhook」を選択する",
+      "C. どちらの設定もLINEボットの動作には一切関係がない",
+      "D. あいさつメッセージをONにすれば、Webhookの設定は不要になる"
+    ],
+    "answer": 1,
+    "explanation": "LINE公式アカウントの管理画面で応答方法を「Webhook」に設定しないと、外部のAIプログラムにメッセージが转送されません。"
+  },
+  {
+    "id": 3,
+    "question": "Replitなどのプログラムに設定する「LINE APIと接続するためのシークレット情報」として不要なものはどれですか？",
+    "options": [
+      "A. Channel Secret（チャネルシークレット）",
+      "B. Channel Access Token（チャネルアクセストークン）",
+      "C. LINEのアカウント登録用パスワード",
+      "D. 連携するプログラムのWebhook URL"
+    ],
+    "answer": 2,
+    "explanation": "API連携に必要なのは「Channel Secret」と「Channel Access Token」です。個人のLINEログイン用パスワードはAPI連携には使用しません（入力してはいけません）。"
+  }
+]
