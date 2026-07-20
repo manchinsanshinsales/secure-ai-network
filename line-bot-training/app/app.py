@@ -2,7 +2,6 @@ import os
 import json
 import requests
 from flask import Flask, request, jsonify
-import google.generativeai as genai
 
 app = Flask(__name__)
 
@@ -11,10 +10,7 @@ LINE_CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "MOCK_TO
 LINE_CHANNEL_SECRET = os.environ.get("LINE_CHANNEL_SECRET", "MOCK_SECRET")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
-# Gemini API の設定
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-else:
+if not GEMINI_API_KEY:
     print("[WARNING] GEMINI_API_KEY が設定されていません。AI応答はモックテキストを返します。")
 
 # データファイルのパス
@@ -44,7 +40,6 @@ CAFE_INFO = load_cafe_info()
 QUESTIONS = load_questions()
 
 # ユーザーのステート管理（インメモリ）
-# 構造: { user_id: { "state": "normal" | "testing", "current_q": 0, "answers": [], "name": "" } }
 user_states = {}
 
 # テスト結果の保存
@@ -86,10 +81,8 @@ def notify_manager(result):
     print("🔔 マネージャーへの通知 (模擬)")
     print(notification_msg)
     print("="*40 + "\n")
-    
-    # 実運用では、ここで管理者のLINEユーザーID宛にプッシュメッセージを送信するなどのロジックが入る
 
-# GeminiによるAI応答生成
+# GeminiによるAI応答生成 (HTTP POSTによる直接アクセス)
 def generate_ai_response(user_message):
     if not GEMINI_API_KEY:
         return "（モック応答）お問い合わせありがとうございます。店舗情報に基づいてAIが回答する仕組みです。"
@@ -105,12 +98,32 @@ def generate_ai_response(user_message):
 【お客様からのメッセージ】
 {user_message}
 """
+    
+    # API エンドポイントとヘッダー、ペイロードの設定
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": prompt}
+                ]
+            }
+        ]
+    }
+    
     try:
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        response = model.generate_content(prompt)
-        return response.text.strip()
+        res = requests.post(url, headers=headers, json=payload, timeout=10)
+        if res.status_code == 200:
+            res_data = res.json()
+            # レスポンスから生成テキストを抽出
+            text = res_data["candidates"][0]["content"]["parts"][0]["text"]
+            return text.strip()
+        else:
+            print(f"Gemini API エラー (ステータスコード: {res.status_code}): {res.text}")
+            return "申し訳ありません。一時的なエラーにより回答できませんでした。"
     except Exception as e:
-        print(f"Gemini API エラー: {e}")
+        print(f"Gemini API 通信エラー: {e}")
         return "申し訳ありません。システムエラーによりAI応答を生成できませんでした。"
 
 # LINEへの返信送信
@@ -181,7 +194,6 @@ def handle_bot_logic(user_id, reply_token, user_message):
             return
         
         # 正誤判定
-        # 選択肢のインデックス（0: A, 1: B, 2: C, 3: D）
         ans_idx = ["A", "B", "C", "D"].index(ans)
         is_correct = (ans_idx == q["answer"])
         state_info["answers"].append({
@@ -220,16 +232,66 @@ def handle_bot_logic(user_id, reply_token, user_message):
             # ステートを通常に戻す
             user_states[user_id] = {"state": "normal"}
 
+# Dialogflow CX Webhookのエンドポイント
+@app.route("/dialogflow/webhook", methods=["POST"])
+def dialogflow_webhook():
+    req_data = request.get_json()
+    if not req_data:
+        return jsonify({"fulfillmentResponse": {"messages": [{"text": {"text": ["無効なリクエストです。"]}}]}}), 400
+        
+    session_info = req_data.get("sessionInfo", {})
+    parameters = session_info.get("parameters", {})
+    # セッション名 (projects/.../agent/sessions/session-id) からIDを抽出
+    session_path = session_info.get("session", "unknown-session")
+    user_id = session_path.split("/")[-1] if "/" in session_path else session_path
+    
+    name = parameters.get("alba_name", "名前未登録")
+    q1 = parameters.get("q1_answer", "").strip().upper()
+    q2 = parameters.get("q2_answer", "").strip().upper()
+    q3 = parameters.get("q3_answer", "").strip().upper()
+    
+    # 採点 (Q1: B, Q2: B, Q3: C)
+    score = 0
+    if q1 == "B": score += 10
+    if q2 == "B": score += 10
+    if q3 == "C": score += 10
+    
+    passed = (score >= 20)
+    
+    # 結果の保存と通知
+    save_test_result(user_id, name, score, passed)
+    
+    result_msg = (
+        f"【テスト終了】\nお疲れ様でした、{name} さん。\n\n"
+        f"結果: {score}点 / 30点\n"
+        f"判定: {'合格🎉（時給アップ！）' if passed else '不合格😢（時給は上がりません。マニュアルを読み直してください。）'}\n\n"
+        f"結果はマネージャーへ報告されました。"
+    )
+    
+    response = {
+        "fulfillmentResponse": {
+            "messages": [
+                {
+                    "text": {
+                        "text": [result_msg]
+                    }
+                }
+            ]
+        },
+        "sessionInfo": {
+            "parameters": {
+                "test_score": score,
+                "test_passed": passed
+            }
+        }
+    }
+    
+    return jsonify(response), 200
+
 # LINE Webhookのエンドポイント
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    # 本番環境ではここで署名検証（LINE_CHANNEL_SECRETを使用）を行うのが望ましい
-    body = request.get_data(as_text=True)
-    try:
-        data = request.get_json()
-    except Exception:
-        return "Invalid JSON", 400
-        
+    data = request.get_json()
     if not data or "events" not in data:
         return "OK", 200
         
@@ -274,4 +336,4 @@ def debug_chat():
     })
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=True)

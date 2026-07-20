@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sushi Survival Japanese Quest | Let's Go Eat Sushi!</title>
+<meta name="description" content="Learn essential Japanese phrases for real local sushi spots in Tokyo. From conveyor belt ordering to chatting with the chef!">
+
+<!-- Meta Tags -->
+<meta property="og:title" content="Sushi Survival Japanese Quest | Let's Go Eat Sushi!">
+<meta property="og:description" content="Learn essential Japanese phrases for real local sushi spots in Tokyo. Join local Japanese members for authentic sushi experiences.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://sushi-english-lp-2607.web.app/ogp.jpg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --shiraki:#F6EEDF;
+  --shiraki-deep:#EDE0C8;
+  --sumi:#221F1A;
+  --sumi-soft:#4A443B;
+  --nori:#1C2721;
+  --nori-line:#33423A;
+  --akami:#B23A48;
+  --akami-deep:#932F3B;
+  --wasabi:#75884A;
+  --tamago:#E8B54A;
+  --ai:#2E4A66;
+  --rice:#FFFDF7;
+  --radius:16px;
+  --font-display:'Dela Gothic One', sans-serif;
+  --font-en:'Bricolage Grotesque', sans-serif;
+  --font-body:'Zen Kaku Gothic New', sans-serif;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:var(--font-en);
+  background:
+    repeating-linear-gradient(90deg, rgba(122,96,58,.04) 0 2px, transparent 2px 90px),
+    linear-gradient(var(--nori), var(--nori));
+  color:var(--rice);
+  line-height:1.7;
+  font-size:16px;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--tamago);text-decoration:none;}
+button{font-family:inherit;cursor:pointer;}
+
+.wrap{max-width:960px;margin:0 auto;padding:0 20px;}
+
+.top{
+  position:sticky;top:0;z-index:50;
+  background:rgba(28, 39, 33, 0.85);
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(255,255,255,.1);
+}
+.top-inner{
+  max-width:960px;margin:0 auto;padding:14px 20px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.logo{
+  font-family:var(--font-display);font-size:15px;letter-spacing:.02em;
+  color:var(--rice);display:flex;align-items:center;gap:8px;
+}
+.logo .dot{width:12px;height:12px;border-radius:50%;background:var(--akami);}
+.top-cta{
+  font-size:13px;font-weight:700;color:var(--sumi);background:var(--tamago);
+  padding:8px 18px;border-radius:999px;white-space:nowrap;
+  transition:transform .2s, background-color .2s;
+}
+.top-cta:hover{background:#f0c360;transform:translateY(-2px);}
+
+.hero{padding:64px 0 48px;text-align:center;}
+.hero-tag{
+  display:inline-block;font-size:12px;font-weight:700;letter-spacing:.15em;
+  color:var(--tamago);border:1.5px solid var(--tamago);border-radius:999px;
+  padding:4px 14px;margin-bottom:18px;background:rgba(232,181,74,0.1);
+}
+.hero h1{
+  font-family:var(--font-display);font-size:clamp(32px, 7vw, 56px);
+  line-height:1.15;letter-spacing:-.01em;margin-bottom:16px;
+}
+.hero h1 em{font-style:normal;color:var(--akami);}
+.hero-p{max-width:620px;margin:0 auto 32px;color:rgba(244,239,230,.82);font-size:17px;}
+
+/* Level Grid */
+.quest-section{padding:32px 0 64px;}
+.level-block{margin-bottom:48px;}
+.level-header{
+  display:flex;align-items:center;gap:12px;margin-bottom:20px;
+  border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:10px;
+}
+.level-badge{
+  font-size:12px;font-weight:800;padding:4px 12px;border-radius:999px;
+  background:var(--badge-bg, var(--tamago));color:var(--sumi);
+}
+.level-title{font-family:var(--font-display);font-size:22px;}
+
+.phrase-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:18px;}
+.phrase-card{
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:var(--radius);
+  padding:22px;
+  display:flex;flex-direction:column;justify-content:space-between;
+  backdrop-filter:blur(8px);
+  transition:transform .3s ease, border-color .3s ease;
+}
+.phrase-card:hover{transform:translateY(-3px);border-color:var(--tamago);}
+.phrase-en{font-size:16px;font-weight:700;color:var(--rice);margin-bottom:6px;}
+.phrase-romaji{font-size:18px;font-weight:800;color:var(--tamago);margin-bottom:4px;}
+.phrase-kanji{font-family:var(--font-body);font-size:15px;color:rgba(244,239,230,0.65);margin-bottom:16px;}
+
+.interest-btn{
+  align-self:flex-start;
+  background:rgba(255,255,255,0.1);
+  border:1px solid rgba(255,255,255,0.2);
+  color:var(--rice);
+  font-size:13px;font-weight:700;
+  padding:7px 16px;border-radius:999px;
+  display:inline-flex;align-items:center;gap:6px;
+  transition:all 0.2s ease;
+}
+.interest-btn:hover{background:var(--akami);border-color:var(--akami);}
+.interest-btn.clicked{background:var(--wasabi);border-color:var(--wasabi);}
+
+/* Sign up form */
+.form-section{padding:48px 0 80px;}
+.form-card{
+  background:rgba(255,253,247,0.95);color:var(--sumi);
+  border-radius:var(--radius);padding:36px 30px;max-width:560px;margin:0 auto;
+  box-shadow:0 20px 40px rgba(0,0,0,0.3);
+}
+.form-card h2{font-family:var(--font-display);font-size:24px;margin-bottom:8px;text-align:center;}
+.form-card p{font-size:14px;color:var(--sumi-soft);text-align:center;margin-bottom:24px;}
+.field{margin-bottom:20px;}
+.field label{display:block;font-size:13.5px;font-weight:700;margin-bottom:8px;}
+.field input[type="email"], .field select{
+  width:100%;font-family:inherit;font-size:16px;padding:12px 14px;
+  border:1.5px solid rgba(34,31,26,.2);border-radius:10px;background:#fff;color:var(--sumi);
+}
+.btn-submit{
+  width:100%;background:var(--akami);color:#fff;font-weight:700;font-size:16px;
+  padding:14px;border-radius:999px;border:none;box-shadow:0 4px 0 var(--akami-deep);
+  transition:transform .2s;
+}
+.btn-submit:hover{transform:translateY(-2px);}
+
+.form-success{display:none;text-align:center;padding:20px 0;}
+.form-success.is-shown{display:block;}
+
+footer{background:rgba(0,0,0,0.4);border-top:1px solid rgba(255,255,255,0.1);padding:32px 0;text-align:center;font-size:13px;color:rgba(255,255,255,0.5);}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <a class="logo" href="index.html"><span class="dot"></span>Let's Go Eat Sushi!</a>
+    <a class="top-cta" href="#join">Get Early Access</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <span class="hero-tag">SUSHI SURVIVAL JAPANESE QUEST</span>
+    <h1>Speak Like a Local at <em>Real Sushi Counters</em></h1>
+    <p class="hero-p">Skip the tourist traps. Learn simple Japanese phrases, team up with friendly local Japanese members, and enjoy authentic Tokyo sushi for a fraction of tour prices.</p>
+  </div>
+</section>
+
+<!-- Quest Phrase List -->
+<section class="quest-section">
+  <div class="wrap">
+    
+    <!-- LEVEL 1 -->
+    <div class="level-block">
+      <div class="level-header">
+        <span class="level-badge" style="--badge-bg:var(--tamago);">LEVEL 1</span>
+        <h2 class="level-title">Conveyor Belt Survival (Kaiten-zushi)</h2>
+      </div>
+      <div class="phrase-grid">
+        <div class="phrase-card">
+          <div>
+            <p class="phrase-en">"Excuse me!" (To call staff)</p>
+            <p class="phrase-romaji">Sumimasen!</p>
+            <p class="phrase-kanji">すみません！</p>
+          </div>
+          <button class="interest-btn" data-id="p1">Interested! 🍣 <span class="count">14</span></button>
+        </div>
+        <div class="phrase-card">
+          <div>
+            <p class="phrase-en">"Green tea, please."</p>
+            <p class="phrase-romaji">Ocha, kudasai.</p>
+            <p class="phrase-kanji">お茶、ください。</p>
+          </div>
+          <button class="interest-btn" data-id="p2">Interested! 🍣 <span class="count">21</span></button>
+        </div>
+        <div class="phrase-card">
+          <div>
+            <p class="phrase-en">"Check please / Thank you for the meal!"</p>
+            <p class="phrase-romaji">Gochisosama deshita!</p>
+            <p class="phrase-kanji">ごちそうさまでした！</p>
+          </div>
+          <button class="interest-btn" data-id="p3">Interested! 🍣 <span class="count">38</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEVEL 2 -->
+    <div class="level-block">
+      <div class="level-header">
+        <span class="level-badge" style="--badge-bg:var(--ai); color:#fff;">LEVEL 2</span>
+        <h2 class="level-title">Local Counter Basics (Order directly)</h2>
+      </div>
+      <div class="phrase-grid">
+        <div class="phrase-card">
+          <div>
+            <p class="phrase-en">"Two pieces of Salmon, please."</p>
+            <p class="phrase-romaji">Saamon futatsu, kudasai.</p>
+            <p class="phrase-kanji">サーモン2つ、ください。</p>
+          </div>
+          <button class="interest-btn" data-id="p4">Interested! 🍣 <span class="count">29</span></button>
+        </div>
+        <div class="phrase-card">
+          <div>
+            <p class="phrase-en">"Without Wasabi, please."</p>
+            <p class="phrase-romaji">Sabi-nuki de onegai shimasu.</p>
+            <p class="phrase-kanji">サビ抜きでお願いします。</p>
+          </div>
+          <button class="interest-btn" data-id="p5">Interested! 🍣 <span class="count">18</span></button>
+        </div>
+        <div class="phrase-card">
+          <div>
+            <p class="phrase-en">"Delicious! / Melts in my mouth!"</p>
+            <p class="phrase-romaji">Umai! Torokeru!</p>
+            <p class="phrase-kanji">うまい！とろける！</p>
+          </div>
+          <button class="interest-btn" data-id="p6">Interested! 🍣 <span class="count">45</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEVEL 3 -->
+    <div class="level-block">
+      <div class="level-header">
+        <span class="level-badge" style="--badge-bg:var(--akami); color:#fff;">LEVEL 3</span>
+        <h2 class="level-title">Chef Interaction (Pro Level)</h2>
+      </div>
+      <div class="phrase-grid">
+        <div class="phrase-card">
+          <div>
+            <p class="phrase-en">"Chef, what's good today?"</p>
+            <p class="phrase-romaji">Kyo no osusume wa nani desu ka?</p>
+            <p class="phrase-kanji">今日のおすすめは形ですか？</p>
+          </div>
+          <button class="interest-btn" data-id="p7">Interested! 🍣 <span class="count">52</span></button>
+        </div>
+        <div class="phrase-card">
+          <div>
+            <p class="phrase-en">"I'll leave it to you (Chef's Choice)."</p>
+            <p class="phrase-romaji">Omakase de!</p>
+            <p class="phrase-kanji">おまかせで！</p>
+          </div>
+          <button class="interest-btn" data-id="p8">Interested! 🍣 <span class="count">61</span></button>
+        </div>
+        <div class="phrase-card">
+          <div>
+            <p class="phrase-en">"Where was this fish caught?"</p>
+            <p class="phrase-romaji">Kore wa doko no osakana desu ka?</p>
+            <p class="phrase-kanji">これはどこのお魚ですか？</p>
+          </div>
+          <button class="interest-btn" data-id="p9">Interested! 🍣 <span class="count">27</span></button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- Signup Form -->
+<section class="form-section" id="join">
+  <div class="wrap">
+    <div class="form-card">
+      <h2>Want to Eat Sushi with Tokyo Locals?</h2>
+      <p>Sign up to receive our full Japanese Sushi Survival Guide PDF and get priority invitations to our upcoming Shibuya sushi meetups!</p>
+      
+      <form id="questForm" novalidate>
+        <div class="field">
+          <label for="qEmail">Email Address</label>
+          <input type="email" id="qEmail" name="email" required placeholder="you@example.com">
+        </div>
+        <div class="field">
+          <label for="qLevel">Your Japanese Level</label>
+          <select id="qLevel" name="level">
+            <option value="beginner">Complete Beginner (0 words)</option>
+            <option value="basic">Basic (Can say Konnichiwa)</option>
+            <option value="intermediate">Intermediate (Can order food)</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-submit">Join & Get Priority Invite 🍣</button>
+      </form>
+
+      <div class="form-success" id="questSuccess">
+        <div style="font-size:40px;">🎉</div>
+        <h3 style="font-family:var(--font-display); font-size:22px; margin:10px 0;">Arigato! You're on the list!</h3>
+        <p>We've sent the first invitation details to your inbox. Get ready for an authentic Tokyo sushi experience!</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Let's Go Eat Sushi! — Shibuya Chapter © 2026</p>
+  </div>
+</footer>
+
+<!-- Interactivity & Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    projectId: "sushi-english-lp-2607",
+    appId: "1:40015696729:web:3f86ee75e0d18031857248",
+    storageBucket: "sushi-english-lp-2607.firebasestorage.app",
+    apiKey: "AIzaSyBxTwLBcNcNTJXCqLhXERVJc1GHwC6gTU4",
+    authDomain: "sushi-english-lp-2607.firebaseapp.com",
+    messagingSenderId: "40015696729",
+    projectNumber: "40015696729"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // Interest Button Counters
+  document.querySelectorAll('.interest-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const countSpan = btn.querySelector('.count');
+      let current = parseInt(countSpan.textContent, 10);
+      if (!btn.classList.contains('clicked')) {
+        btn.classList.add('clicked');
+        countSpan.textContent = current + 1;
+      }
+    });
+  });
+
+  // Form Handler
+  const form = document.getElementById("questForm");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const emailEl = document.getElementById("qEmail");
+    if (!emailEl.value || !emailEl.checkValidity()) {
+      emailEl.focus();
+      return;
+    }
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    const data = new FormData(form);
+
+    try {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Sending...";
+
+      await addDoc(collection(db, "nihongo_quest_registrations"), {
+        email: data.get("email"),
+        level: data.get("level"),
+        createdAt: serverTimestamp()
+      });
+
+      form.style.display = "none";
+      document.getElementById("questSuccess").classList.add("is-shown");
+    } catch (err) {
+      console.error("Firebase Error:", err);
+      alert("Something went wrong. Please try again later.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,16 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 日本人メンバー事前登録用
+    match /registrations/{document} {
+      allow create: if request.resource.data.email != null && request.resource.data.email != "";
+      allow read, update, delete: if false;
+    }
+    // 外国人向け日本語クエスト事前登録用
+    match /nihongo_quest_registrations/{document} {
+      allow create: if request.resource.data.email != null && request.resource.data.email != "";
+      allow read, update, delete: if false;
+    }
+  }
+}
