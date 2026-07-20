@@ -11,14 +11,16 @@
 
 ---
 
-## 📌 STEP 1: LINE Developers でのチャネル作成
+## 📌 STEP 1: LINE公式アカウントの作成と Messaging API の有効化
 
-1. [LINE Developers Console](https://developers.line.biz/) にログインします。
-2. 「プロバイダー」を選択（または新規作成）し、**「 Messaging API 」** のチャネルを新規作成します。
-3. チャネル設定画面から以下の2つの文字列をコピーして手元に控えます：
+1. [LINE Official Account Manager](https://manager.line.biz/) にアクセスし、**「LINE公式アカウントを作成」** ボタンからアカウントを新規作成します。
+2. アカウント作成後、管理画面の右上にある **「設定（歯車マーク）」➔「Messaging API」** メニューを開きます。
+3. **「Messaging APIを利用する」** ボタンをクリックし、プロバイダーを選択（または新規作成）して有効化します。
+4. 有効化完了後、[LINE Developers Console](https://developers.line.biz/) へのリンクが表示されるので、LINE Developers に移動します。
+5. 作成されたチャネルの設定画面から、以下の2つの文字列をコピーして手元に控えます：
    - **Channel Secret**（「チャネル基本設定」タブ内にあります）
    - **Channel Access Token**（「Messaging API」タブ内で「発行」ボタンを押して取得）
-4. 「LINE Official Account Manager」の応答設定で、応答モードを **「Webhook」** に変更します。
+6. LINE Official Account Manager の「応答設定」で、応答モードを **「Webhook」** に変更します。
 
 ---
 
